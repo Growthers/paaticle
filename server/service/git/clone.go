@@ -5,12 +5,11 @@ import (
 	"os/exec"
 )
 
-func Clone(RepositoryURL string, AppID string) (LocalRepositoryPath string, err error) {
+func Clone(RepositoryURL string, AppID string) (err error) {
 	command := fmt.Sprintf("/usr/bin/git clone %s ./%s", RepositoryURL, AppID)
 	err = exec.Command("/bin/sh", "-c", command).Start()
 	if err != nil {
-		return "", err
+		return
 	}
-	LocalRepositoryPath = ""
 	return
 }
