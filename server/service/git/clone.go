@@ -5,9 +5,9 @@ import (
 	"os/exec"
 )
 
-func Clone(RepositoryURL string, AppID string) (err error) {
+func Clone(RepositoryURL string, AppID string) (res []byte, err error) {
 	command := fmt.Sprintf("/usr/bin/git clone %s ./%s", RepositoryURL, AppID)
-	err = exec.Command("/bin/sh", "-c", command).Start()
+	res, err = exec.Command("/bin/sh", "-c", command).CombinedOutput()
 	if err != nil {
 		return
 	}
