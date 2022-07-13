@@ -7,22 +7,17 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
 	"io/ioutil"
 	"log"
 	"os"
 	"strings"
 )
 
-func BuildDockerImage(ImageName string) error {
-	cli, err := client.NewClientWithOpts(client.FromEnv)
-	if err != nil {
-		return err
-	}
+func BuildDockerImage(ImageName string, ContainerTag string) (parsed ParsedBuildOutput, err error) {
 
 	buildOpts := types.ImageBuildOptions{
 		Dockerfile: ImageName,
-		Tags:       []string{"paaticle"},
+		Tags:       []string{ContainerTag},
 	}
 
 	res, err := cli.ImageBuild(
@@ -31,15 +26,18 @@ func BuildDockerImage(ImageName string) error {
 		buildOpts,
 	)
 	if err != nil {
-		return err
+		return
 	}
 	defer res.Body.Close()
 
 	body, _ := ioutil.ReadAll(res.Body)
 	//fmt.Println(string(body), res)
-	buildOutPutParser(string(body))
+	parsed, err = buildOutPutParser(string(body))
+	if err != nil {
+		return
+	}
 
-	return nil
+	return
 }
 
 // DockerはtarでまとめられたDockerfileしか受け取らないのでtarでまとめる
@@ -58,7 +56,7 @@ func makeArchivedDockerfile(fileName string) *bytes.Reader {
 		log.Panic(err)
 	}
 
-	// archive the Dockerfile
+	// archive Dockerfile
 	tarHeader := &tar.Header{
 		Name: fileName,
 		Size: int64(len(b)),
@@ -87,7 +85,7 @@ type auxID struct {
 	ID string `json:"ID"`
 }
 
-type parsedBuildOutput struct {
+type ParsedBuildOutput struct {
 	Log     string
 	ImageID string
 }
@@ -98,7 +96,7 @@ DockerのImage Buildの出力はJSON形式で、
 	{"aux": {"ID": "sha256"}}
 
 */
-func buildOutPutParser(Out string) (res parsedBuildOutput, err error) {
+func buildOutPutParser(Out string) (res ParsedBuildOutput, err error) {
 	var readLine []string
 
 	// ビルドの出力を1行ごとに分解する
@@ -118,7 +116,7 @@ func buildOutPutParser(Out string) (res parsedBuildOutput, err error) {
 		// 出力はJSONなのでパース
 		err := json.Unmarshal([]byte(v), &tmp)
 		if err != nil {
-			return
+			return ParsedBuildOutput{}, err
 		}
 
 		parsedOutPutStrings = append(parsedOutPutStrings, tmp.Stream)
